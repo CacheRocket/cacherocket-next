@@ -1,7 +1,11 @@
+import { uploadStatic, type UploadStaticOptions } from './uploadStatic';
+
 export type ApiKeyAuth = {
   publicKey?: string;
   secretKey?: string;
 };
+
+export { uploadStatic, type UploadStaticOptions };
 
 export type WarmOptions = ApiKeyAuth & {
   siteId?: string;

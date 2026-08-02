@@ -4,5 +4,6 @@ export {
   resolveSiteToken,
   resolveImageBaseUrl,
   resolveAssetOrigin,
+  resolveStaticCdnUrl,
   type CacheRocketNextOptions,
 } from './config';

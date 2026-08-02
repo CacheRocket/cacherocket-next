@@ -16,6 +16,10 @@ function resolveAssetOrigin(explicit) {
   const raw = explicit || process.env.CACHEROCKET_ASSET_ORIGIN || process.env.NEXT_PUBLIC_CACHEROCKET_ASSET_ORIGIN || process.env.NEXT_PUBLIC_BASE_URL || "";
   return raw.trim().replace(/\/+$/, "");
 }
+function resolveStaticCdnUrl(explicit) {
+  const raw = explicit || process.env.CACHEROCKET_STATIC_CDN_URL || process.env.NEXT_PUBLIC_CACHEROCKET_STATIC_CDN_URL || "";
+  return raw.trim().replace(/\/+$/, "");
+}
 function buildImageUrl(params) {
   const siteToken = resolveSiteToken(params.siteToken);
   if (!siteToken) {
@@ -65,6 +69,7 @@ function withCacheRocket(options = {}, nextConfig = {}) {
       "@cacherocket/next: CACHEROCKET_SITE_TOKEN is not set. Image loader URLs will fail at runtime."
     );
   }
+  const staticCdnUrl = resolveStaticCdnUrl(options.staticCdnUrl);
   const env = {
     ...nextConfig.env || {}
   };
@@ -80,8 +85,13 @@ function withCacheRocket(options = {}, nextConfig = {}) {
     env.CACHEROCKET_ASSET_ORIGIN = options.assetOrigin;
     env.NEXT_PUBLIC_CACHEROCKET_ASSET_ORIGIN = options.assetOrigin;
   }
+  if (staticCdnUrl) {
+    env.CACHEROCKET_STATIC_CDN_URL = staticCdnUrl;
+    env.NEXT_PUBLIC_CACHEROCKET_STATIC_CDN_URL = staticCdnUrl;
+  }
   return {
     ...nextConfig,
+    ...staticCdnUrl ? { assetPrefix: staticCdnUrl } : {},
     env,
     images: {
       ...nextConfig.images || {},
@@ -95,6 +105,7 @@ export {
   resolveAssetOrigin,
   resolveImageBaseUrl,
   resolveSiteToken,
+  resolveStaticCdnUrl,
   withCacheRocket
 };
 //# sourceMappingURL=index.js.map

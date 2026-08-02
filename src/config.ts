@@ -8,6 +8,12 @@ export type CacheRocketNextOptions = {
    * Example: https://www.example.com
    */
   assetOrigin?: string;
+  /**
+   * Optional CDN base for Next.js `/_next/static` (customer sites only).
+   * From Account → Next.js → Static asset CDN (`staticCdnUrl`).
+   * Sets `assetPrefix` — do not confuse with CacheRocket.com's own `CACHEROCKET_CDN_URL`.
+   */
+  staticCdnUrl?: string;
 };
 
 const DEFAULT_IMAGE_BASE = 'https://img.cacherocket.com';
@@ -36,6 +42,19 @@ export function resolveAssetOrigin(explicit?: string): string {
     process.env.CACHEROCKET_ASSET_ORIGIN ||
     process.env.NEXT_PUBLIC_CACHEROCKET_ASSET_ORIGIN ||
     process.env.NEXT_PUBLIC_BASE_URL ||
+    '';
+  return raw.trim().replace(/\/+$/, '');
+}
+
+/**
+ * Customer Next.js static CDN base (assetPrefix).
+ * Uses CACHEROCKET_STATIC_CDN_URL only — never CacheRocket's internal CACHEROCKET_CDN_URL.
+ */
+export function resolveStaticCdnUrl(explicit?: string): string {
+  const raw =
+    explicit ||
+    process.env.CACHEROCKET_STATIC_CDN_URL ||
+    process.env.NEXT_PUBLIC_CACHEROCKET_STATIC_CDN_URL ||
     '';
   return raw.trim().replace(/\/+$/, '');
 }

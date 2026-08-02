@@ -1,7 +1,36 @@
+type ApiKeyAuth$1 = {
+    publicKey?: string;
+    secretKey?: string;
+};
+type UploadStaticOptions = ApiKeyAuth$1 & {
+    siteId?: string;
+    /** Local directory to upload (default: `.next/static`). */
+    dir?: string;
+    apiBaseUrl?: string;
+    organizationId?: string;
+    /**
+     * Wipe the remote static prefix before the first batch (default true).
+     * Subsequent batches in the same run keep `replace: false`.
+     */
+    replace?: boolean;
+    /** Max files per API request (default 30). */
+    batchSize?: number;
+};
+/**
+ * Upload `.next/static` (or a custom dir) to CacheRocket Managed CDN for the site.
+ * Requires static CDN enabled on the site in Account → Next.js.
+ */
+declare function uploadStatic(options?: UploadStaticOptions): Promise<{
+    uploaded: number;
+    batches: number;
+    staticCdnUrl?: string | null;
+}>;
+
 type ApiKeyAuth = {
     publicKey?: string;
     secretKey?: string;
 };
+
 type WarmOptions = ApiKeyAuth & {
     siteId?: string;
     urls?: string[];
@@ -35,4 +64,4 @@ type OnVercelDeployOptions = ApiKeyAuth & {
  */
 declare function onVercelDeploy(options?: OnVercelDeployOptions): (req: Request) => Promise<Response>;
 
-export { type ApiKeyAuth, type OnVercelDeployOptions, type PurgeOptions, type WarmOptions, onVercelDeploy, purge, warm };
+export { type ApiKeyAuth, type OnVercelDeployOptions, type PurgeOptions, type UploadStaticOptions, type WarmOptions, onVercelDeploy, purge, uploadStatic, warm };

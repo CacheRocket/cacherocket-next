@@ -1,12 +1,15 @@
 {
   "name": "@cacherocket/next",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "CacheRocket CDN + cache warming helpers for Next.js (complements Vercel/Netlify hosting)",
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "bin": {
+    "cacherocket-next": "./dist/cli.js"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

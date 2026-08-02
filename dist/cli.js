@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 // src/uploadStatic.ts
 import { readdir, readFile, stat } from "fs/promises";
 import { join, relative } from "path";
@@ -136,135 +138,54 @@ async function uploadStatic(options = {}) {
   return { uploaded, batches, staticCdnUrl };
 }
 
-// src/server.ts
-function resolveApiBase(explicit) {
-  return (explicit || process.env.CACHEROCKET_API_BASE_URL || "https://api.cacherocket.com").replace(/\/+$/, "");
-}
-function resolveKeys2(auth = {}) {
-  const publicKey = auth.publicKey || process.env.CACHEROCKET_PUBLIC_KEY || process.env.CACHEROCKET_API_PUBLIC_KEY || "";
-  const secretKey = auth.secretKey || process.env.CACHEROCKET_SECRET_KEY || process.env.CACHEROCKET_API_SECRET_KEY || process.env.CACHEROCKET_API_KEY || "";
-  if (!publicKey || !secretKey) {
-    throw new Error(
-      "@cacherocket/next: missing API keys. Set CACHEROCKET_PUBLIC_KEY and CACHEROCKET_SECRET_KEY (server-only)."
-    );
+// src/cli.ts
+async function main() {
+  const [cmd, ...args] = process.argv.slice(2);
+  if (!cmd || cmd === "--help" || cmd === "-h") {
+    printHelp();
+    process.exit(cmd ? 0 : 1);
   }
-  return { publicKey, secretKey };
-}
-function resolveSiteId2(explicit) {
-  const id = explicit || process.env.CACHEROCKET_SITE_ID || "";
-  if (!id.trim()) {
-    throw new Error(
-      "@cacherocket/next: missing siteId. Set CACHEROCKET_SITE_ID or pass siteId."
-    );
-  }
-  return id.trim();
-}
-async function sitesFetch(path, init) {
-  const { publicKey, secretKey } = resolveKeys2(init.auth);
-  const base = resolveApiBase(init.apiBaseUrl);
-  const body = {
-    ...init.body || {},
-    publicKey,
-    secretKey,
-    ...init.organizationId ? { organizationId: init.organizationId } : {}
-  };
-  const res = await fetch(`${base}/web/v1/sites${path}`, {
-    method: init.method || "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Public-Key": publicKey,
-      "X-Secret-Key": secretKey
-    },
-    body: JSON.stringify(body)
-  });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok || json.success === false) {
-    throw new Error(json.message || `CacheRocket API error (${res.status})`);
-  }
-  return json.data;
-}
-async function warm(options = {}) {
-  const siteId = resolveSiteId2(options.siteId);
-  return sitesFetch(`/${siteId}/warm`, {
-    method: "POST",
-    auth: options,
-    apiBaseUrl: options.apiBaseUrl,
-    organizationId: options.organizationId,
-    body: {
-      urls: options.urls,
-      crawlerId: options.crawlerId,
-      hostname: options.hostname
-    }
-  });
-}
-async function purge(options = {}) {
-  const siteId = resolveSiteId2(options.siteId);
-  return sitesFetch(`/${siteId}/purge`, {
-    method: "POST",
-    auth: options,
-    apiBaseUrl: options.apiBaseUrl,
-    organizationId: options.organizationId,
-    body: {
-      urls: options.urls,
-      rewarm: options.rewarm
-    }
-  });
-}
-function onVercelDeploy(options = {}) {
-  return async function POST(req) {
-    try {
-      const incoming = await req.json().catch(() => ({}));
-      const { publicKey, secretKey } = resolveKeys2(options);
-      const base = resolveApiBase(options.apiBaseUrl);
-      if (options.siteId || process.env.CACHEROCKET_SITE_ID) {
-        const siteId = resolveSiteId2(options.siteId);
-        const urls = [];
-        if (typeof incoming.url === "string") urls.push(incoming.url);
-        if (typeof incoming.deploymentUrl === "string") urls.push(incoming.deploymentUrl);
-        if (Array.isArray(incoming.urls)) {
-          for (const u of incoming.urls) {
-            if (typeof u === "string") urls.push(u);
-          }
-        }
-        const data = await sitesFetch(`/${siteId}/warm`, {
-          method: "POST",
-          auth: { publicKey, secretKey },
-          apiBaseUrl: options.apiBaseUrl,
-          organizationId: options.organizationId,
-          body: { urls: urls.length ? urls : void 0 }
-        });
-        return Response.json({ success: true, data });
+  if (cmd === "upload-static") {
+    let dir;
+    let replace = true;
+    for (let i = 0; i < args.length; i++) {
+      const a = args[i];
+      if (a === "--dir" && args[i + 1]) {
+        dir = args[++i];
+      } else if (a === "--no-replace") {
+        replace = false;
+      } else if (a === "--help" || a === "-h") {
+        console.log(`Usage: cacherocket-next upload-static [--dir .next/static] [--no-replace]
+
+Uploads Next.js hashed static assets to CacheRocket Managed CDN.
+Requires CACHEROCKET_PUBLIC_KEY, CACHEROCKET_SECRET_KEY, CACHEROCKET_SITE_ID
+and static CDN enabled for the site in Account \u2192 Next.js.`);
+        process.exit(0);
       }
-      const res = await fetch(`${base}/web/v1/public/webhooks/vercel`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Public-Key": publicKey,
-          "X-Secret-Key": secretKey
-        },
-        body: JSON.stringify({
-          ...incoming,
-          publicKey,
-          secretKey
-        })
-      });
-      const json = await res.json().catch(() => ({}));
-      return Response.json(json, { status: res.status });
-    } catch (error) {
-      return Response.json(
-        {
-          success: false,
-          message: error instanceof Error ? error.message : "Deploy warm failed"
-        },
-        { status: 500 }
-      );
     }
-  };
+    const result = await uploadStatic({ dir, replace });
+    console.log(
+      `@cacherocket/next: uploaded ${result.uploaded} files in ${result.batches} batch(es)` + (result.staticCdnUrl ? `
+assetPrefix: ${result.staticCdnUrl}` : "")
+    );
+    return;
+  }
+  console.error(`Unknown command: ${cmd}`);
+  printHelp();
+  process.exit(1);
 }
-export {
-  onVercelDeploy,
-  purge,
-  uploadStatic,
-  warm
-};
-//# sourceMappingURL=server.js.map
+function printHelp() {
+  console.log(`CacheRocket Next.js CLI
+
+Commands:
+  upload-static   Upload .next/static to Managed CDN (customer sites)
+
+Examples:
+  npx cacherocket-next upload-static
+  npx cacherocket-next upload-static --dir .next/static`);
+}
+main().catch((error) => {
+  console.error(error instanceof Error ? error.message : error);
+  process.exit(1);
+});
+//# sourceMappingURL=cli.js.map

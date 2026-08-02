@@ -2,7 +2,7 @@ import { createRequire } from 'node:module';
 import { dirname, isAbsolute, join, relative } from 'node:path';
 import type { NextConfig } from 'next';
 import type { CacheRocketNextOptions } from './config';
-import { resolveSiteToken } from './config';
+import { resolveSiteToken, resolveStaticCdnUrl } from './config';
 
 /**
  * Next.js joins `images.loaderFile` with the project root. Absolute paths get
@@ -26,7 +26,8 @@ function resolveLoaderFile(): string {
 
 /**
  * Wires CacheRocket as the custom next/image loader.
- * Does not set assetPrefix — keep hosting (Vercel/etc.) for HTML/SSR.
+ * Optionally sets `assetPrefix` for `/_next/static` when `staticCdnUrl` /
+ * `CACHEROCKET_STATIC_CDN_URL` is set (customer Managed CDN — not HTML/SSR).
  */
 export function withCacheRocket(
   options: CacheRocketNextOptions = {},
@@ -38,6 +39,8 @@ export function withCacheRocket(
       '@cacherocket/next: CACHEROCKET_SITE_TOKEN is not set. Image loader URLs will fail at runtime.'
     );
   }
+
+  const staticCdnUrl = resolveStaticCdnUrl(options.staticCdnUrl);
 
   const env: Record<string, string> = {
     ...((nextConfig.env as Record<string, string> | undefined) || {}),
@@ -54,9 +57,14 @@ export function withCacheRocket(
     env.CACHEROCKET_ASSET_ORIGIN = options.assetOrigin;
     env.NEXT_PUBLIC_CACHEROCKET_ASSET_ORIGIN = options.assetOrigin;
   }
+  if (staticCdnUrl) {
+    env.CACHEROCKET_STATIC_CDN_URL = staticCdnUrl;
+    env.NEXT_PUBLIC_CACHEROCKET_STATIC_CDN_URL = staticCdnUrl;
+  }
 
   return {
     ...nextConfig,
+    ...(staticCdnUrl ? { assetPrefix: staticCdnUrl } : {}),
     env,
     images: {
       ...(nextConfig.images || {}),
