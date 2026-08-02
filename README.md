@@ -16,13 +16,13 @@ Add to your project `.npmrc`:
 Use a GitHub PAT (classic) with `read:packages` as `GITHUB_TOKEN`, or for public packages after the package visibility is set to public you may still need auth depending on org settings.
 
 ```bash
-npm i @cacherocket/next@0.1.3
+npm i @cacherocket/next@0.1.0
 ```
 
 Alternatively (no Packages registry):
 
 ```bash
-npm i github:CacheRocket/cacherocket-next#v0.1.3
+npm i github:CacheRocket/cacherocket-next#v0.1.0
 ```
 
 ```env
